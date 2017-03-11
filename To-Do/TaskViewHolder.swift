@@ -28,7 +28,7 @@ class TaskViewHolder: AbstractTableViewHolder<TodoTask> {
 	let title		= UILabel(frame: .zero);
 	let button	= IconButton(frame: .zero);
 	
-	var task: TodoTask = TodoTask();
+	var task: TodoTask?
 	
 	override func prepare() {
 		super.prepare();		
@@ -59,14 +59,14 @@ class TaskViewHolder: AbstractTableViewHolder<TodoTask> {
 			.disposed(by: dispose);
 		
 		observable
-			.map({ item -> Bool in item.state == 1 })
-			.bindTo(check.rx.isSelected)
-			.disposed(by: dispose);
-		
-		observable
 			.bindNext({ [weak weakSelf = self] task in
 				weakSelf?.task = task;
 			}).disposed(by: dispose);
+		
+		observable
+			.map({ item -> Bool in item.state == 1 })
+			.bindTo(check.rx.isSelected)
+			.disposed(by: dispose);
 		
 		observable
 			.map({ item -> NSAttributedString in
@@ -83,13 +83,18 @@ class TaskViewHolder: AbstractTableViewHolder<TodoTask> {
 		// you should stay alive as long as you must
 		button.rx.tap
 			.bindNext({ [weak weakSelf = self] _ in
-				BusManager.send(event: DeleteTaskEvent(task: (weakSelf?.task)!));
+				if let task = weakSelf?.task {
+					BusManager.send(event: DeleteTaskEvent(task: task));
+				}
 			}).disposed(by: dispose);
 		
 		check.rx.tap
 			.bindNext({ [weak weakSelf = self] _ in
-				weakSelf?.task.state = weakSelf?.task.state == 0 ? 1: 0;
-				BusManager.send(event: ChangeTaskEvent(task: (weakSelf?.task)!));
+				if let task = weakSelf?.task {
+					task.state = task.state == 0 ? 1: 0;
+					weakSelf?.task = task;
+					BusManager.send(event: ChangeTaskEvent(task: task));
+				}
 			}).disposed(by: dispose);
 	}
 	
